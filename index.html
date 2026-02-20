@@ -1,382 +1,245 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>SUPER SURVIVOR</title>
+<title>Infernal Pixel</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
-html, body {
-  margin: 0;
-  padding: 0;
-  background: black;
-  overflow: hidden;
-  touch-action: none;
-  font-family: Arial;
-  color: white;
+body{
+  margin:0;
+  background:#2a0000;
+  overflow:hidden;
+  font-family:Arial,sans-serif;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  flex-direction:column;
+  height:100vh;
 }
 
-#space {
-  position: fixed;
-  inset: 0;
-  background:
-    radial-gradient(2px 2px at 20% 30%, white, transparent),
-    radial-gradient(2px 2px at 80% 70%, white, transparent),
-    radial-gradient(1px 1px at 50% 50%, white, transparent),
-    black;
-  animation: spaceMove 0.8s linear infinite;
-  z-index: 0;
-}
-@keyframes spaceMove {
-  from { background-position: 0 0; }
-  to { background-position: 0 1400px; }
+canvas{
+  background:radial-gradient(circle,#cc4400,#440000);
+  border-radius:10px;
+  margin-top:-20px;
 }
 
-canvas {
-  position: fixed;
-  inset: 0;
-  z-index: 2;
-  display: none;
+/* LOBBY */
+#lobby{
+  position:fixed;
+  inset:0;
+  background:radial-gradient(circle,#ff3300,#550000);
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  z-index:999;
 }
 
-.screen {
-  position: fixed;
-  inset: 0;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  z-index: 3;
+#lobby h1{
+  color:#fff;
+  font-size:36px;
+  text-shadow:0 0 15px red;
 }
 
-#lobby { display: flex; }
-
-button {
-  padding: 15px 30px;
-  font-size: 18px;
-  background: crimson;
-  color: white;
-  border: none;
-  border-radius: 10px;
+#lobby button{
+  font-size:22px;
+  padding:14px 40px;
+  border:none;
+  border-radius:10px;
+  background:#ff2200;
+  color:#fff;
 }
 
-#ui {
-  position: fixed;
-  top: 10px;
-  left: 10px;
-  z-index: 4;
-  display: none;
+/* ANALÓGICO */
+#joystick{
+  position:fixed;
+  bottom:18px;
+  left:50%;
+  transform:translateX(-50%);
+  width:130px;
+  height:130px;
+  border-radius:50%;
+  background:rgba(255,255,255,0.15);
 }
 
-#joystick {
-  position: fixed;
-  bottom: 30px;
-  left: 30px;
-  width: 120px;
-  height: 120px;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.1);
-  display: none;
-  z-index: 4;
+#stick{
+  position:absolute;
+  left:50%;
+  top:50%;
+  width:50px;
+  height:50px;
+  border-radius:50%;
+  transform:translate(-50%,-50%);
+  background:radial-gradient(circle,#ffcc00,#ff3300,#660000);
+  box-shadow:0 0 25px orange,0 0 45px red;
 }
 
-#stick {
-  position: absolute;
-  left: 40px;
-  top: 40px;
-  width: 40px;
-  height: 40px;
-  background: cyan;
-  border-radius: 50%;
+/* BOTÕES */
+button.gameBtn{
+  position:fixed;
+  left:50%;
+  transform:translateX(-50%);
+  padding:14px 30px;
+  font-size:20px;
+  border:none;
+  border-radius:10px;
+  display:none;
 }
 
-#shootBtn {
-  position: fixed;
-  bottom: 40px;
-  right: 40px;
-  width: 90px;
-  height: 90px;
-  border-radius: 50%;
-  background: crimson;
-  color: white;
-  border: none;
-  display: none;
-  z-index: 4;
-}
+#restart{ top:60%; background:#00ff88; }
+#backLobby{ top:50%; background:#ff2200; color:white; }
 </style>
 </head>
 
 <body>
 
-<div id="space"></div>
-
-<div id="lobby" class="screen">
-  <h1>🚀 SUPER SURVIVOR 🚀</h1>
-  <button onclick="startGame()">JOGAR</button>
+<!-- LOBBY -->
+<div id="lobby">
+  <h1>Infernal Pixel</h1>
+  <button id="startBtn">INICIAR</button>
 </div>
 
-<div id="gameOver" class="screen">
-  <h1>💀 GAME OVER</h1>
-  <p>Pontos: <span id="finalScore">0</span></p>
-  <button onclick="backToLobby()">Voltar ao Lobby</button>
-</div>
-
-<div id="ui">
-❤️ Vida: <span id="life">100</span><br>
-⭐ Pontos: <span id="score">0</span><br>
-⚡ SUPER: <span id="superTime">0</span>
-</div>
+<canvas id="game" width="360" height="520"></canvas>
 
 <div id="joystick"><div id="stick"></div></div>
-<button id="shootBtn">ATIRAR</button>
-<canvas id="game"></canvas>
+
+<button id="backLobby" class="gameBtn">Voltar para o Lobby</button>
+<button id="restart" class="gameBtn">Reiniciar</button>
 
 <script>
-const dpi = window.devicePixelRatio || 1;
-const vw = innerWidth;
-const vh = innerHeight;
-const scale = Math.min(vw, vh) / 420;
+const canvas=document.getElementById("game");
+const ctx=canvas.getContext("2d");
 
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
+/* 🔊 MÚSICA LOCAL (OBRIGATÓRIO TER musica.mp3 NA PASTA) */
+const musica = new Audio("musica.mp3");
+musica.loop = true;
+musica.volume = 0.8;
 
-canvas.width = vw * dpi;
-canvas.height = vh * dpi;
-canvas.style.width = vw + "px";
-canvas.style.height = vh + "px";
-ctx.setTransform(dpi,0,0,dpi,0,0);
+const somPerdeu = new Audio("https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg");
 
-let life=100, score=0, running=false;
-let bullets=[], enemies=[], supers=[];
-let shooting=false, superMode=false, superTimer=0;
-let gameIntervals = [];
+let player,enemies,score,over;
+let fire=[];
+let musicStarted=false;
 
-const player={ x:vw/2, y:vh/2, r:18*scale };
-let joy={x:0,y:0}, dir={x:0,y:-1};
-
-function drawPlayer(){
-  ctx.save();
-  ctx.translate(player.x, player.y);
-  ctx.rotate(Math.atan2(dir.y, dir.x) + Math.PI/2);
-
-  ctx.fillStyle="#00f6ff";
-  ctx.beginPath();
-  ctx.moveTo(0,-26*scale);
-  ctx.lineTo(18*scale,22*scale);
-  ctx.lineTo(0,14*scale);
-  ctx.lineTo(-18*scale,22*scale);
-  ctx.closePath();
-  ctx.fill();
-
-  ctx.strokeStyle="#aaffff";
-  ctx.lineWidth=2*scale;
-  ctx.stroke();
-
-  ctx.fillStyle="#0a2a3a";
-  ctx.beginPath();
-  ctx.ellipse(0,-6*scale,6*scale,9*scale,0,0,Math.PI*2);
-  ctx.fill();
-
-  ctx.fillStyle="#00c0ff";
-  ctx.beginPath();
-  ctx.moveTo(-18*scale,10*scale);
-  ctx.lineTo(-30*scale,26*scale);
-  ctx.lineTo(-8*scale,22*scale);
-  ctx.closePath();
-  ctx.fill();
-
-  ctx.beginPath();
-  ctx.moveTo(18*scale,10*scale);
-  ctx.lineTo(30*scale,26*scale);
-  ctx.lineTo(8*scale,22*scale);
-  ctx.closePath();
-  ctx.fill();
-
-  ctx.fillStyle="orange";
-  ctx.beginPath();
-  ctx.arc(0,22*scale,4*scale,0,Math.PI*2);
-  ctx.fill();
-
-  ctx.restore();
+function resetar(){
+  player={x:160,y:380,w:38,h:38,dx:0,dy:0,speed:8};
+  enemies=[];
+  score=0;
+  over=false;
+  fire=[];
+  document.querySelectorAll(".gameBtn").forEach(b=>b.style.display="none");
+  loop();
 }
 
-function drawAlien(e){
-  ctx.fillStyle="lime";
-  ctx.beginPath();
-  ctx.ellipse(e.x,e.y,18*scale,8*scale,0,0,Math.PI*2);
-  ctx.fill();
-  ctx.fillStyle="green";
-  ctx.beginPath();
-  ctx.ellipse(e.x,e.y-5*scale,8*scale,6*scale,0,0,Math.PI*2);
-  ctx.fill();
-}
-
-function drawSuper(s){
-  s.h+=5;
-  ctx.fillStyle=`hsl(${s.h},100%,50%)`;
-  ctx.beginPath();
-  ctx.arc(s.x,s.y,14*scale,0,Math.PI*2);
-  ctx.fill();
-  ctx.fillStyle="white";
-  ctx.font=`${12*scale}px Arial`;
-  ctx.fillText("SUPER",s.x-22*scale,s.y-18*scale);
-}
-
+/* ANALÓGICO */
 const joystick=document.getElementById("joystick");
 const stick=document.getElementById("stick");
-const shootBtn=document.getElementById("shootBtn");
+let ativo=false;
+const limite=50;
 
-joystick.addEventListener("touchmove", e=>{
-  const r = joystick.getBoundingClientRect();
-  let x = e.touches[0].clientX - (r.left + r.width/2);
-  let y = e.touches[0].clientY - (r.top + r.height/2);
-  const max = 40;
-  const dist = Math.hypot(x,y);
-  if(dist>max){ x=(x/dist)*max; y=(y/dist)*max; }
-  joy.x=x; joy.y=y;
-  if(dist>5){ dir.x=x/dist; dir.y=y/dist; }
-  stick.style.left=40+x+"px";
-  stick.style.top=40+y+"px";
+joystick.addEventListener("touchstart",()=>{
+  ativo=true;
 });
 
-joystick.addEventListener("touchend", ()=>{
-  joy.x=joy.y=0;
-  stick.style.left="40px";
-  stick.style.top="40px";
+joystick.addEventListener("touchend",()=>{
+  ativo=false;
+  stick.style.transform="translate(-50%,-50%)";
+  player.dx=0; player.dy=0;
 });
 
-shootBtn.ontouchstart=()=>shooting=true;
-shootBtn.ontouchend=()=>shooting=false;
+joystick.addEventListener("touchmove",e=>{
+  if(!ativo)return;
+  const t=e.touches[0];
+  const r=joystick.getBoundingClientRect();
+  let x=t.clientX-(r.left+r.width/2);
+  let y=t.clientY-(r.top+r.height/2);
+  const d=Math.hypot(x,y);
+  if(d>limite){x=x/d*limite;y=y/d*limite;}
+  stick.style.transform=`translate(${x}px,${y}px)`;
+  player.dx=x/limite*player.speed;
+  player.dy=y/limite*player.speed;
 
-function loop(){
-  if(!running) return;
-  ctx.clearRect(0,0,vw,vh);
+  fire.push({x:canvas.width/2+x,y:canvas.height-70+y,life:15});
+});
 
-  const maxSpeed = 8 * scale;
-  const joyDist = Math.hypot(joy.x, joy.y);
-  const norm = joyDist / 40;
-  const speed = Math.min(norm, 1) * maxSpeed;
-
-  player.x += dir.x * speed;
-  player.y += dir.y * speed;
-
-  player.x = Math.max(player.r, Math.min(vw - player.r, player.x));
-  player.y = Math.max(player.r, Math.min(vh - player.r, player.y));
-
-  drawPlayer();
-
-  supers.forEach((s,i)=>{
-    drawSuper(s);
-    if(Math.hypot(player.x-s.x,player.y-s.y)<player.r+14*scale){
-      superMode=true;
-      superTimer=300;
-      supers.splice(i,1);
-    }
-  });
-
-  bullets.forEach((b,i)=>{
-    b.x+=b.dx; b.y+=b.dy;
-    ctx.fillStyle="yellow";
-    ctx.fillRect(b.x,b.y,4*scale,4*scale);
-    if(b.x<0||b.y<0||b.x>vw||b.y>vh) bullets.splice(i,1);
-  });
-
-  enemies.forEach((e,i)=>{
-    let dx=player.x-e.x, dy=player.y-e.y, d=Math.hypot(dx,dy);
-    e.x+=dx/d*1.2*scale;
-    e.y+=dy/d*1.2*scale;
-    drawAlien(e);
-
-    bullets.forEach((b,bi)=>{
-      if(Math.hypot(b.x-e.x,b.y-e.y)<e.r){
-        e.life-=10;
-        bullets.splice(bi,1);
-        if(e.life<=0){ enemies.splice(i,1); score+=10; }
-      }
-    });
-
-    if(d<player.r+e.r){
-      life--;
-      if(life<=0){ life=0; gameOver(); }
-    }
-  });
-
-  if(superMode){
-    superTimer--;
-    document.getElementById("superTime").innerText=Math.ceil(superTimer/60);
-    if(superTimer<=0) superMode=false;
-  } else {
-    document.getElementById("superTime").innerText=0;
+/* INIMIGOS */
+setInterval(()=>{
+  if(!over){
+    enemies.push({x:Math.random()*(canvas.width-38),y:-40,w:38,h:38,s:5+score/120});
   }
+},900);
 
-  document.getElementById("life").innerText=life;
-  document.getElementById("score").innerText=score;
+function colisao(a,b){
+  return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;
+}
+
+/* LOOP */
+function loop(){
+  if(over)return;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  ctx.fillStyle="rgba(255,80,0,0.15)";
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  fire.forEach((p,i)=>{
+    ctx.fillStyle="rgba(255,140,0,0.6)";
+    ctx.beginPath();
+    ctx.arc(p.x,p.y,3,0,Math.PI*2);
+    ctx.fill();
+    p.y-=1.5;
+    if(--p.life<=0)fire.splice(i,1);
+  });
+
+  player.x+=player.dx;
+  player.y+=player.dy;
+  player.x=Math.max(0,Math.min(canvas.width-player.w,player.x));
+  player.y=Math.max(0,Math.min(canvas.height-player.h,player.y));
+
+  ctx.fillStyle="lime";
+  ctx.fillRect(player.x,player.y,player.w,player.h);
+
+  ctx.fillStyle="#ff0000";
+  enemies.forEach(e=>{
+    e.y+=e.s;
+    ctx.fillRect(e.x,e.y,e.w,e.h);
+    if(colisao(player,e)){
+      over=true;
+      somPerdeu.play();
+      musica.pause();
+      musicStarted=false;
+      document.getElementById("restart").style.display="block";
+      document.getElementById("backLobby").style.display="block";
+    }
+  });
+
+  enemies=enemies.filter(e=>e.y<canvas.height+50);
+
+  score++;
+  ctx.fillStyle="white";
+  ctx.fillText("Pontos: "+score,10,20);
 
   requestAnimationFrame(loop);
 }
 
-function startGame(){
-  gameIntervals.forEach(id => clearInterval(id));
-  gameIntervals=[];
-
-  life=100; score=0; bullets=[]; enemies=[]; supers=[];
-  player.x=vw/2; player.y=vh/2;
-  running=true;
-
+/* BOTÕES */
+document.getElementById("startBtn").addEventListener("click",()=>{
+  if(!musicStarted){
+    musica.currentTime=0;
+    musica.play().catch(()=>{});
+    musicStarted=true;
+  }
   document.getElementById("lobby").style.display="none";
-  canvas.style.display="block";
-  document.getElementById("ui").style.display="block";
-  joystick.style.display="block";
-  shootBtn.style.display="block";
+  resetar();
+});
 
-  gameIntervals.push(setInterval(()=>{
-    if(running && shooting && !superMode){
-      bullets.push({x:player.x,y:player.y,dx:dir.x*10*scale,dy:dir.y*10*scale});
-    }
-  },70));
+document.getElementById("restart").onclick=resetar;
 
-  gameIntervals.push(setInterval(()=>{
-    if(running && superMode){
-      for(let i=0;i<16;i++){
-        let a=Math.PI*2/16*i;
-        bullets.push({x:player.x,y:player.y,dx:Math.cos(a)*7*scale,dy:Math.sin(a)*7*scale});
-      }
-    }
-  },180));
-
-  gameIntervals.push(setInterval(()=>{
-    if(running){
-      enemies.push({x:Math.random()*vw,y:Math.random()*vh,r:18*scale,life:30});
-    }
-  },900));
-
-  gameIntervals.push(setInterval(()=>{
-    if(running && !superMode){
-      supers.push({x:Math.random()*vw,y:Math.random()*vh,h:0});
-    }
-  },6000));
-
-  loop();
-}
-
-function gameOver(){
-  running=false;
-  document.getElementById("finalScore").innerText=score;
-  document.getElementById("gameOver").style.display="flex";
-}
-
-function backToLobby(){
-  running=false;
-  gameIntervals.forEach(id => clearInterval(id));
-  gameIntervals=[];
-  document.getElementById("gameOver").style.display="none";
-  canvas.style.display="none";
-  document.getElementById("ui").style.display="none";
-  joystick.style.display="none";
-  shootBtn.style.display="none";
+document.getElementById("backLobby").onclick=()=>{
   document.getElementById("lobby").style.display="flex";
-}
+  resetar();
+};
 </script>
 
 </body>
-  </html>
+</html>>
